@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ragnarok M: Classic - จำลองการตีบวกไอเทม</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Ragnarok M: Classic</h1>
+            <h2>จำลองการตีบวกไอเทม</h2>
+        </header>
+        
+        <main>
+            <div class="simulator-container">
+                <div class="item-selection">
+                    <h3>เลือกไอเทม</h3>
+                    <select id="itemType">
+                        <option value="weapon">1. อาวุธ (Weapon)</option>
+                        <option value="shield">2. โล่และถุงมือ (Shield/Glove)</option>
+                        <option value="armor">3. ชุดเกราะ (Armor)</option>
+                        <option value="garment">4. เสื้อคลุม (Garment)</option>
+                        <option value="shoes">5. รองเท้า (Shoes)</option>
+                        <option value="accessory">6. เครื่องประดับ (Accessory)</option>
+                        <option value="hat">7. หมวก (Hat)</option>
+                        <option value="face">8. หน้า (Face)</option>
+                        <option value="mouth">9. ปาก (Mouth)</option>
+                        <option value="back">10. หลัง (Back)</option>
+                        <option value="tail">11. หาง (Tail)</option>
+                    </select>
+                    
+                    <button id="addToInventoryBtn" class="inventory-btn">เพิ่มไอเทมลงคลัง</button>
+                    
+                    <div class="inventory-container">
+                        <h3>คลังไอเทมจำลอง</h3>
+                        <div id="inventory" class="inventory">
+                            <!-- ไอเทมในคลังจะถูกเพิ่มที่นี่ด้วย JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="refine-status">
+                    <div class="current-item">
+                        <div id="itemSymbol" class="item-symbol">⚔️</div>
+                        <div class="refine-level">+<span id="currentRefineLevel">0</span></div>
+                    </div>
+                    
+                    <div class="stats">
+                        <p>อัตราความสำเร็จ: <span id="successRate">100</span>%</p>
+                        <p>โอกาสแตก: <span id="breakRate">0</span>%</p>
+                        <p>ค่าใช้จ่าย: <span id="refineCost">0</span> Zeny</p>
+                        <p>หินตีบวก: <span id="stoneUse">1/1</span></p>
+                    </div>
+                    
+                    <div class="current-stats">
+                        <h3>เพิ่ม ATK/DEF</h3>
+                        <p>+<span id="statBonus">0</span></p>
+                    </div>
+                    
+                    <div class="total-cost">
+                        <p>Zeny ที่ใช้ไป: <span id="totalZeny">0</span></p>
+                        <p>หินตีบวกที่ใช้ไป: <span id="totalStones">0</span></p>
+                    </div>
+                    
+                    <div class="refine-history">
+                        <h3>Log</h3>
+                        <div id="refineLog"></div>
+                    </div>
+                </div>
+                
+                <div class="actions">
+                    <button id="refineBtn" class="refine-btn">Refine</button>
+                    <button id="resetBtn" class="reset-btn">เริ่มใหม่ (Reset)</button>
+                    <button id="resetAllBtn" class="reset-all-btn">รีเซ็ตทั้งหมด</button>
+                </div>
+                
+                <div class="statistics">
+                    <h3>สถิติ</h3>
+                    <p>จำนวนครั้งที่ตีบวก: <span id="totalAttempts">0</span></p>
+                    <p>จำนวนครั้งที่สำเร็จ: <span id="successCount">0</span></p>
+                    <p>จำนวนครั้งที่ล้มเหลว: <span id="failCount">0</span></p>
+                    <p>จำนวนครั้งที่ไอเทมแตก: <span id="breakCount">0</span></p>
+                    <p>Zeny รวมที่ใช้: <span id="totalZenySpent">0</span></p>
+                    <p>หินตีบวกรวมที่ใช้: <span id="totalStonesUsed">0</span></p>
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            <p>©Zayn Refine Simulator - ไม่มีส่วนเกี่ยวข้องกับ Ragnarok M: Classic.</p>
+        </footer>
+    </div>
+    
+    <script src="js/script.js"></script>
+</body>
+</html>
