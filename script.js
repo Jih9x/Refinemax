@@ -51,6 +51,7 @@ const resetAllBtn = document.getElementById('resetAllBtn');
 const itemSymbol = document.getElementById('itemSymbol');
 const inventoryContainer = document.getElementById('inventory');
 const addToInventoryBtn = document.getElementById('addToInventoryBtn');
+const repairBtn = document.getElementById('repairBtn');
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', initialize);
@@ -61,6 +62,28 @@ resetBtn.addEventListener('click', resetCurrentItem);
 resetAllBtn.addEventListener('click', resetAll);
 addToInventoryBtn.addEventListener('click', addItemToInventory);
 
+// ปรับโหมดซ่อม: เมื่อกดปุ่มซ่อม ให้เลือกวัตถุดิบจากคลัง (เลือกได้ทุกไอเทม)
+let repairMode = false; // true = กำลังเลือกวัตถุดิบ
+let repairTargetId = null; // ไอเทมหลักที่จะแก้แตก
+let repairMaterialId = null; // ไอเทมวัตถุดิบ
+
+repairBtn.addEventListener('click', () => {
+    if (!repairMode) {
+        // เริ่มโหมดเลือกวัตถุดิบ
+        repairMode = true;
+        repairTargetId = currentItemId;
+        repairMaterialId = null;
+        addToLog('เลือกไอเทมวัตถุดิบจากคลังเพื่อซ่อม', 'reset');
+        renderInventory();
+        updateBrokenSelectStatus();
+        updateRepairBtnState();
+        repairBtn.textContent = 'ยืนยันซ่อม';
+    } else {
+        // ยืนยันซ่อม
+        repairItem();
+    }
+});
+
 // Initialize the simulator
 function initialize() {
     updateItemImage();
@@ -68,6 +91,7 @@ function initialize() {
     updateStatBonus();
     updateStats();
     loadInventory(); // โหลดข้อมูลคลังจำลองจาก localStorage ถ้ามี
+    updateRepairBtnState();
 }
 
 // โหลดข้อมูลคลังจำลองจาก localStorage
@@ -104,8 +128,11 @@ function addItemToInventory() {
     
     inventory.push(newItem);
     saveInventory();
+    // รีเซ็ตโหมดซ่อมหลังเพิ่มไอเทมใหม่
+    repairMode = false;
+    repairTargetId = null;
+    repairMaterialId = null;
     renderInventory();
-    
     // เลือกไอเทมที่เพิ่งเพิ่ม
     selectItemFromInventory(itemId);
 }
@@ -113,7 +140,7 @@ function addItemToInventory() {
 // แสดงรายการไอเทมในคลังจำลอง
 function renderInventory() {
     inventoryContainer.innerHTML = '';
-    
+    updateRepairNotice();
     if (inventory.length === 0) {
         const emptyText = document.createElement('p');
         emptyText.textContent = 'คลังว่างเปล่า เพิ่มไอเทมโดยเลือกประเภทไอเทมและกดปุ่ม "เพิ่มไอเทมลงคลัง"';
@@ -124,15 +151,44 @@ function renderInventory() {
         inventoryContainer.appendChild(emptyText);
         return;
     }
-    
-    // สร้างรายการไอเทมในคลัง
     inventory.forEach(item => {
         const itemElement = document.createElement('div');
         itemElement.className = 'inventory-item';
         if (item.isBroken) {
             itemElement.classList.add('broken');
         }
-        if (item.id === currentItemId) {
+        // ป้ายและกรอบพิเศษขณะซ่อม
+        if (repairMode && item.id === repairTargetId) {
+            itemElement.classList.add('selected');
+            itemElement.style.borderColor = '#ff3333';
+            // ป้ายกำลังซ่อม
+            const repairLabel = document.createElement('div');
+            repairLabel.textContent = 'กำลังซ่อม';
+            repairLabel.style.position = 'absolute';
+            repairLabel.style.top = '4px';
+            repairLabel.style.left = '4px';
+            repairLabel.style.background = '#ff3333';
+            repairLabel.style.color = '#fff';
+            repairLabel.style.fontSize = '0.7em';
+            repairLabel.style.padding = '2px 6px';
+            repairLabel.style.borderRadius = '4px';
+            itemElement.appendChild(repairLabel);
+        } else if (repairMode && item.id === repairMaterialId) {
+            itemElement.classList.add('selected');
+            itemElement.style.borderColor = '#4bdc7c';
+            // ป้ายวัตถุดิบ
+            const matLabel = document.createElement('div');
+            matLabel.textContent = 'วัตถุดิบ';
+            matLabel.style.position = 'absolute';
+            matLabel.style.top = '4px';
+            matLabel.style.left = '4px';
+            matLabel.style.background = '#4bdc7c';
+            matLabel.style.color = '#13183a';
+            matLabel.style.fontSize = '0.7em';
+            matLabel.style.padding = '2px 6px';
+            matLabel.style.borderRadius = '4px';
+            itemElement.appendChild(matLabel);
+        } else if (!repairMode && item.id === currentItemId) {
             itemElement.classList.add('selected');
         }
         
@@ -206,12 +262,19 @@ function renderInventory() {
             itemElement.appendChild(brokenMark);
         }
         
-        // เพิ่ม event listener สำหรับการคลิกเลือกไอเทม
+        // event listener สำหรับเลือกไอเทม (เลือกได้ทุกสถานะ ถ้าไม่ใช่โหมดซ่อม)
         itemElement.addEventListener('click', () => {
-            if (!item.isBroken) {
-                selectItemFromInventory(item.id);
+            if (repairMode) {
+                // เลือกวัตถุดิบ (เลือกได้ทุกไอเทม ยกเว้นตัวเอง)
+                if (item.id !== repairTargetId) {
+                    repairMaterialId = item.id;
+                    renderInventory();
+                    updateBrokenSelectStatus();
+                    updateRepairBtnState();
+                }
             } else {
-                alert('ไอเทมนี้แตกแล้ว ไม่สามารถเลือกได้');
+                // โหมดปกติ เลือกไอเทมใดก็ได้
+                selectItemFromInventory(item.id);
             }
         });
         
@@ -219,29 +282,59 @@ function renderInventory() {
     });
 }
 
+function updateRepairNotice() {
+    const notice = document.getElementById('repairNotice');
+    if (!notice) return;
+    if (repairMode && !repairMaterialId) {
+        notice.style.display = '';
+        notice.textContent = 'เลือกไอเทมวัตถุดิบจากคลังเพื่อซ่อมไอเทมนี้';
+        notice.style.background = '#fffbe6';
+        notice.style.color = '#b16a3b';
+        notice.style.padding = '8px';
+        notice.style.marginBottom = '8px';
+        notice.style.borderRadius = '6px';
+        notice.style.textAlign = 'center';
+        notice.style.fontWeight = 'bold';
+    } else if (repairMode && repairMaterialId) {
+        notice.style.display = '';
+        notice.textContent = 'พร้อมซ่อม กด “ยืนยันซ่อม” เพื่อดำเนินการ';
+        notice.style.background = '#e6fff2';
+        notice.style.color = '#1a7f5a';
+        notice.style.padding = '8px';
+        notice.style.marginBottom = '8px';
+        notice.style.borderRadius = '6px';
+        notice.style.textAlign = 'center';
+        notice.style.fontWeight = 'bold';
+    } else {
+        notice.style.display = 'none';
+    }
+}
+
 // เลือกไอเทมจากคลังจำลอง
 function selectItemFromInventory(itemId) {
-    // รีเซ็ตไอเทมปัจจุบันก่อน
     resetCurrentItemState();
-    
-    // หาไอเทมที่เลือกจากคลัง
     const selectedItem = inventory.find(item => item.id === itemId);
-    if (selectedItem && !selectedItem.isBroken) {
+    if (selectedItem) {
         currentItemId = itemId;
-        
-        // อัพเดทข้อมูลไอเทมปัจจุบัน
         itemTypeSelect.value = selectedItem.type;
         currentRefineLevel = selectedItem.level;
         isItemBroken = selectedItem.isBroken;
-        
-        // อัพเดท UI
         updateItemImage();
         updateRefineLevelDisplay();
         updateStatBonus();
         updateRates();
-        renderInventory(); // อัพเดทการแสดงไอเทมที่เลือกในคลัง
-        
-        addToLog(`เลือกไอเทม ${selectedItem.name} +${selectedItem.level}`, 'reset');
+        renderInventory();
+        // แสดงสถานะ 0/1 หรือ 1/1
+        updateBrokenSelectStatus();
+        if (!selectedItem.isBroken) {
+            addToLog(`เลือกไอเทม ${selectedItem.name} +${selectedItem.level}`, 'reset');
+            repairBtn.style.display = 'none';
+            refineBtn.style.display = '';
+        } else {
+            repairBtn.style.display = '';
+            refineBtn.style.display = 'none';
+            addToLog(`เลือกไอเทมที่แตก +${selectedItem.level} สามารถซ่อมได้`, 'break');
+        }
     }
 }
 
@@ -356,6 +449,8 @@ function refineItem() {
     // ถ้าไอเทมแตกแล้ว ไม่สามารถตีบวกต่อได้
     if (isItemBroken) {
         alert("ไอเทมแตกแล้ว ไม่สามารถตีบวกต่อได้! เลือกไอเทมอื่นหรือกด Reset");
+        repairBtn.style.display = '';
+        refineBtn.style.display = 'none';
         return;
     }
 
@@ -439,6 +534,8 @@ function refineItem() {
         // แสดงข้อความแจ้งเตือนที่ชัดเจนยิ่งขึ้น
         alert(`ไอเทม ${itemName} แตกแล้ว! กรุณาเลือกไอเทมอื่นจากคลังจำลอง`);
         addToLog(`ไม่สามารถตีบวก ${itemName} ต่อได้ เนื่องจากไอเทมแตก กรุณาเลือกไอเทมใหม่`, 'break');
+        repairBtn.style.display = '';
+        refineBtn.style.display = 'none';
     }
     
     // อัพเดทข้อมูลไอเทมในคลัง
@@ -488,22 +585,23 @@ function resetRefineLevel() {
 // รีเซ็ตสถานะของไอเทมปัจจุบัน (แต่ไม่รีเซ็ตสถิติทั้งหมด)
 function resetCurrentItemState() {
     isItemBroken = false;
-    
-    // คืนค่าภาพกลับสู่ปกติ
     itemSymbol.style.opacity = "1";
     itemSymbol.style.filter = "none";
-    
-    // ลบคลาส broken ออกจากระดับตีบวก
     const refineLevelElement = document.querySelector('.refine-level');
-    if (refineLevelElement) {
-        refineLevelElement.classList.remove('broken');
-    }
-    
-    // ลบไอคอนกากบาท
+    if (refineLevelElement) refineLevelElement.classList.remove('broken');
     const brokenIcon = document.querySelector('.broken-icon');
-    if (brokenIcon) {
-        brokenIcon.remove();
-    }
+    if (brokenIcon) brokenIcon.remove();
+    repairBtn.style.display = 'none';
+    refineBtn.style.display = '';
+    // เรียก updateBrokenSelectStatus ในจุดที่เหมาะสม เช่นหลัง repairItem, resetCurrentItemState
+    updateBrokenSelectStatus();
+    updateRepairBtnState();
+    repairMode = false;
+    repairTargetId = null;
+    repairMaterialId = null;
+    updateBrokenSelectStatus();
+    updateRepairBtnState();
+    repairBtn.textContent = 'ซ่อม';
 }
 
 // Reset current item (แต่ไม่รีเซ็ตสถิติทั้งหมด)
@@ -583,4 +681,56 @@ function resetAll() {
         
         addToLog('รีเซ็ตระบบทั้งหมด', 'reset');
     }
+}
+
+// เพิ่มฟังก์ชันแสดงสถานะ 0/1 หรือ 1/1
+function updateBrokenSelectStatus() {
+    const el = document.getElementById('brokenSelectStatus');
+    if (!el) return;
+    if (repairMode && repairMaterialId) {
+        el.textContent = '1/1';
+        el.style.color = '#4bdc7c';
+    } else if (repairMode) {
+        el.textContent = '0/1';
+        el.style.color = '#ff3333';
+    } else {
+        el.textContent = '0/1';
+        el.style.color = '#c9d1ff';
+    }
+}
+
+function updateRepairBtnState() {
+    if (repairMode && repairMaterialId) {
+        repairBtn.disabled = false;
+    } else if (repairMode) {
+        repairBtn.disabled = true;
+    } else {
+        repairBtn.disabled = false;
+    }
+}
+
+function repairItem() {
+    if (!(repairMode && repairTargetId && repairMaterialId)) return;
+    const target = inventory.find(i => i.id === repairTargetId);
+    const material = inventory.find(i => i.id === repairMaterialId);
+    if (!target || !material || !target.isBroken) return;
+    target.isBroken = false;
+    delete target.brokenAtLevel;
+    // ลบวัตถุดิบออกจากคลัง
+    inventory = inventory.filter(i => i.id !== repairMaterialId);
+    saveInventory();
+    addToLog('ซ่อมไอเทมสำเร็จโดยใช้ไอเทมวัตถุดิบ', 'reset');
+    // รีเซ็ตโหมดซ่อม
+    repairMode = false;
+    repairTargetId = null;
+    repairMaterialId = null;
+    repairBtn.textContent = 'ซ่อม';
+    // ซ่อนปุ่มซ่อมหากไอเทมหลักไม่พังแล้ว
+    if (!target.isBroken) {
+        repairBtn.style.display = 'none';
+        refineBtn.style.display = '';
+    }
+    renderInventory();
+    updateBrokenSelectStatus();
+    updateRepairBtnState();
 }
